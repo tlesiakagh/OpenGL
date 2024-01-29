@@ -1,0 +1,185 @@
+#include <iostream>
+#include <string>
+#include <vector>
+#include <numeric>
+
+using namespace std;
+
+#define STARTROUGHNESS 400
+#define myRANDOM (float)(rand() % STARTROUGHNESS)
+#define RANDOM ((float) rand() / (RAND_MAX))-1
+
+float sample(int x, int y, int nrows, int ncols, float *values)
+{
+	float sampleValue = 0;
+	// (x & (ncols - 1)) + (y & (nrows - 1)) * ncols
+	if ((x >= 0 && x <= (ncols - 1)) && (y >= 0 && y <= (nrows - 1))) {
+		sampleValue = values[(y * ncols) + x];
+		//cout << "(" << x << ", " << y << ") In range!" << endl;
+	}
+	else {
+		//cout << "(" << x << ", " << y << ") Not in range!" << endl;
+	}
+
+	return sampleValue;
+}
+
+void showValuesAsMatrix(int nrows, int ncols, float	*values) {
+	for (int y = 0; y < nrows; y++) {
+		for (int x = 0; x < ncols; x++) {
+			cout << sample(x, y, nrows, ncols, values) << " ";
+		}
+		cout << endl;
+	}
+}
+
+void setSample(int x, int y, int ncols, float *values, float value)
+{
+	//cout << "Setting data at pos: " << (y * ncols) + x << endl;
+	// (x & (ncols - 1)) + (y & (nrows - 1)) * ncols
+	// (x % (ncols - 1)) + (y % (nrows - 1)) * ncols
+	// (y * ncols) + x
+	values[(y * ncols) + x] = value;
+}
+
+void initGenerator(int nrows, int ncols, int startingStepSize, float *values) {
+	srand(time(NULL));
+	float randomValue = 0.0;
+
+	for (int y = 0; y < nrows; y++) {
+		for (int x = 0; x < ncols; x++) {
+			//cout << "(" << x << ", " << y << ")" << endl;
+			setSample(x, y, ncols, values, 0);
+		}
+	}
+
+	randomValue = myRANDOM;
+
+	for (int y = 0; y < nrows; y += startingStepSize) {
+		for (int x = 0; x < ncols; x += startingStepSize) {
+			//randomValue = myRANDOM;
+			//cout << "randomValue -> " << randomValue << endl;
+			setSample(x, y, ncols, values, randomValue);
+		}
+	}
+}
+
+void sampleSquare(int x, int y, int stepSize, int ncols, float value, float* values)
+{
+	//cout << "Entering sampleSquare" << endl;
+	//cout << "(" << x << ", " << y << ")" << endl;
+	//cout << ncols << endl;
+	int hs = stepSize / 2;
+
+	// a     b
+	//
+	//    x
+	//
+	// c     d
+
+	float a = sample(x - hs, y - hs, nrows, ncols, values);
+	float c = sample(x - hs, y + hs, nrows, ncols, values);
+	float d = sample(x + hs, y + hs, nrows, ncols, values);
+	float b = sample(x + hs, y - hs, nrows, ncols, values);
+
+	//cout << "scale: " << value << endl;
+	//cout << "meanValue: " << ((a + b + c + d) / 4.0) << endl;
+	//cout << "SquareValue: " << ((a + b + c + d) / 4.0) + value << endl;
+	cout << "a: " << a << endl;
+	cout << "b: " << b << endl;
+	cout << "c: " << c << endl;
+	cout << "d: " << d << endl;
+	setSample(x, y, ncols, values, ((a + b + c + d) / 4.0) + value);
+	//cout << "Exiting sampleSquare" << endl;
+}
+
+
+void sampleDiamond(int x, int y, int stepSize, int ncols, float value, float* values)
+{
+	//cout << "Entering sampleDiamond" << endl;
+	int hs = stepSize / 2;
+
+	//   c
+	//
+	//a  x  b
+	//
+	//   d
+
+	float a = sample(x - hs, y, nrows, ncols, values);
+	float b = sample(x + hs, y, nrows, ncols, values);
+	float c = sample(x, y - hs, nrows, ncols, values);
+	float d = sample(x, y + hs, nrows, ncols, values);
+
+	//cout << "DiamondValue: " << ((a + b + c + d) / 4.0) + value << endl;
+
+	setSample(x, y, ncols, values, ((a + b + c + d) / 4.0) + value);
+	//cout << "Exiting sampleDiamond" << endl;
+}
+
+
+void DiamondSquare(int nrows, int ncols, int stepSize, float scale, float* values)
+{
+	int hs = stepSize / 2;
+	int xPlusHs, yPlusHs;
+	//cout << "Entering DiamondSquare" << endl;
+	for (int y = hs; y < nrows; y += stepSize)
+	{
+		for (int x = hs; x < ncols; x += stepSize)
+		{
+			sampleSquare(x, y, stepSize, ncols, RANDOM * scale, values);
+		}
+	}
+
+	for (int y = 0; y < nrows; y += stepSize)
+	{
+		for (int x = 0; x < ncols; x += stepSize)
+		{
+			xPlusHs = x + hs;
+			yPlusHs = y + hs;
+			//cout << "pos -> (" << xPlusHs << ", " << y << ")" << endl;
+
+			if ((xPlusHs >= 0 && xPlusHs <= (ncols - 1))) {
+				sampleDiamond(xPlusHs, y, stepSize, ncols, RANDOM * scale, values);
+			}
+
+			if ((yPlusHs >= 0 && yPlusHs <= (nrows - 1))) {
+				sampleDiamond(x, yPlusHs, stepSize, ncols, RANDOM * scale, values);
+			}
+		}
+	}
+	//cout << "Exiting DiamondSquare" << endl;
+}
+
+void testMyRandom() {
+	for (int y = 0; y < 20; y++) {
+		cout << myRANDOM << endl;
+	}
+}
+
+void prepareElevationDataWithDiamondSquare(int nrows, int ncols, int startingStepSize, float* values) {
+	initGenerator(nrows, ncols, startingStepSize, values);
+
+	int currentStepSize = startingStepSize;
+	int step = 1;
+	string trash;
+
+	float scale = 1.0;
+	float roughness = 200;
+	// W niektórych implementacjach wykorzystuj¹ roughness zamiast scale
+	// W przypadku roughness liczbê dodawan¹ do œredniej z 4 punktów losuj¹ z przedzia³u (-roughness, roughness), zamiast RANDOM * scale
+
+	while (currentStepSize > 1)
+	{
+		//DiamondSquare(nrows, ncols, currentStepSize, scale, values);
+		DiamondSquare(nrows, ncols, currentStepSize, roughness, values);
+
+		currentStepSize /= 2;
+		//scale /= 2.0;
+		roughness /= 2.0;
+		showValuesAsMatrix(nrows, ncols, values);
+		cin >> trash;
+		//cout << step << endl;
+		//cout << roughness << endl;
+		step++;
+	}
+}

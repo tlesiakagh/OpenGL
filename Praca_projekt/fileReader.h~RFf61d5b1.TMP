@@ -1,0 +1,210 @@
+#include <iostream>
+#include <string>
+#include <fstream>
+#include <vector>
+#include <numeric>
+
+using namespace std;
+
+int nrows = 0, ncols = 0;
+size_t startPos = 0, endPos = 0;
+fstream dataFile;
+//string path = "draw_data/test.asc";
+//string path = "draw_data/tatry2.asc";
+string path = "draw_data/tatryRow.asc";
+
+void loadParamsFromFile();
+int getNcols();
+int getNrows();
+vector<float> getDrawDataFromFile();
+vector<float> normalize(vector<float> valuesFromFile, float oldMin, float oldMax);
+float* loadVertices();
+// float prepareVBO(int ncols, int nrows, vector<float> elevationData);
+
+/*
+--------------OPIS PLIKU WEJŒCIOWEGO--------------
+ 1. Pierwsze 2 linie to odpowiednio iloœæ kolumn i wierszy
+ 2. Reszta linii zawiera tylko informacje dotycz¹ce elewacji
+ 3. Dane s¹ u³o¿one poziomo (linia to wiersz)
+ 4. Oddzielone s¹ spacjami
+
+*/
+
+void loadParamsFromFile() {
+	int lineNum = 1;
+	string token = "", data = "";
+	string delim = " ";
+	dataFile.open(path, ios::in);
+
+	while (getline(dataFile, data) && lineNum <= 2)
+	{
+		// Czytaj parametry do zmiennych
+		endPos = data.find(delim);
+		startPos = endPos + delim.length();
+		token = data.substr(startPos, data.length() - startPos);
+
+		switch (lineNum)
+		{
+		case 1:
+			ncols = stoi(token);
+			break;
+		case 2:
+			nrows = stoi(token);
+			break;
+		default:
+			//cout << token << endl;
+			break;
+		}
+
+		lineNum++;
+	}
+
+	dataFile.close();
+}
+
+int getNcols() {
+	loadParamsFromFile();
+	//cout << "ncols: " << ncols << endl;
+	return ncols;
+}
+
+int getNrows() {
+	loadParamsFromFile();
+	//cout << "nrows: " << nrows << endl;
+	return nrows;
+}
+
+vector<float> getDrawDataFromFile() {
+	int counter = 1, lineNum = 1;
+	float tmp = 0.0;
+	string token = "", data = "";
+	string delim = " ";
+	vector<float> valuesFromFile;
+
+	while (getline(dataFile, data) && lineNum <= (nrows + 2))
+	{
+		if (lineNum > 2) {
+			// Czytaj dane do tablicy
+			startPos = 0;
+			endPos = data.find(delim);
+			counter = 1;
+			do {
+				token = data.substr(startPos, endPos - startPos);
+				startPos = endPos + delim.length();
+				endPos = data.find(delim, startPos);
+				tmp = stof(token.c_str());
+				valuesFromFile.push_back(tmp);
+				//cout << token << " ";
+				//cout << atof(token.c_str()) <<  " ";
+				counter++;
+				if (counter == ncols) {
+					//cout << token << " ";
+				}
+			} while (counter <= ncols);//token == "-9999"   endPos != string::npos 
+			//cout << "Number of data in line " << lineNum << " -> " << counter << endl;
+		}
+		lineNum++;
+	}
+
+	return valuesFromFile;
+}
+
+vector<float> normalize(vector<float> valuesFromFile, float oldMin, float oldMax) {
+	// normalizacja
+
+	for (int i = 0; i < valuesFromFile.size(); i++) {
+		valuesFromFile[i] = (((valuesFromFile[i] - oldMin) / (oldMax - oldMin)) * (1 - (-1))) + (-1);
+	}
+
+	//x' = (((x - min)/(max - min)) * (newmax-newmin)) + newmin
+	return valuesFromFile;
+}
+
+//Z tego przyda³oby siê zrobiæ funkcjê, która przygotuje tablicê do VBO nie zale¿nie czy jest czytana z pliku czy generowana przez algorytm, czyli
+// 1. Przyjmie ncols, nrows, elevationData
+// 2. Wykona ich normalizacjê do przedzia³u <-1,1>
+// 3. Wypuœci jako dane do jednej tablicy float/float (VBO)
+float* loadVertices() {
+	float* verticesF{};
+	vector<float> valuesFromFile, X, Y, Z;
+	dataFile.open(path, ios::in);
+
+	if (dataFile.is_open()) {
+		valuesFromFile = getDrawDataFromFile();
+
+		dataFile.close();
+		cout << "nrows: " << nrows << " ncols: " << ncols << " size: " << valuesFromFile.size() << endl;
+
+		//cout << "ValuesFromFile: " << endl;
+		for (int i = 39990; i < valuesFromFile.size(); i++) {
+			//cout << valuesFromFile[i] << ",";
+		}
+
+		// Wyszukuje min max wartoœæ spoœród pobranych z pliku
+		float valuesFromFileMin = *min_element(valuesFromFile.begin(), valuesFromFile.end());
+		float valuesFromFileMax = *max_element(valuesFromFile.begin(), valuesFromFile.end());
+
+		//cout << "min: " << *min_element(valuesFromFile.begin(), valuesFromFile.end()) << endl;
+		//cout << "max: " << *max_element(valuesFromFile.begin(), valuesFromFile.end()) << endl;
+
+		vector<float> nrowsData(nrows), ncolsData(ncols);
+
+		// Wype³nia wektory X, ncolsData wartoœciami z przedzia³ów [1, nrows], [1, ncols]
+		std::iota(nrowsData.begin(), nrowsData.end(), 1);
+		std::iota(std::rbegin(ncolsData), std::rend(ncolsData), 1);
+
+		cout << "nrowsData[0] = " << nrowsData[0] << " nrowsData[last] = " << nrowsData[nrowsData.size() - 1] << endl;
+		cout << "ncolsData[0] = " << ncolsData[0] << " ncolsData[last] = " << ncolsData[ncolsData.size() - 1] << endl;
+
+		// TO DO
+		// 1. £adowanie z 3(?) vectorów do jednej tablicy verticesF, któr¹ potem wykorzystam do rysowania
+
+		X = normalize(nrowsData, 1, nrows);
+		Y = normalize(valuesFromFile, valuesFromFileMin, valuesFromFileMax);
+		Z = normalize(ncolsData, 1, ncols);
+
+		//auto Ymax = max_element(Y.begin(), Y.end());
+		//auto max = max_element(valuesFromFile.begin(), valuesFromFile.end());
+
+		//cout << "X[0] = " << X[0] << " X[last] = " << X[X.size() - 1] << endl;
+		//cout << "min = " << *min_element(valuesFromFile.begin(), valuesFromFile.end()) << " max = " << *max << " pos " << std::distance(valuesFromFile.begin(), max) << endl;
+		//cout << "Xmin = " << *min_element(X.begin(), X.end()) << " Xmax = " << *max_element(X.begin(), X.end()) << endl;
+		//cout << "Ymin = " << *min_element(Y.begin(), Y.end()) << " Ymax = " << *max_element(Y.begin(), Y.end()) << endl;
+		//cout << "Zmin = " << *min_element(Z.begin(), Z.end()) << " Zmax = " << *max_element(Z.begin(), Z.end()) << endl;
+		//cout << "Z[0] = " << Z[0] << " Z[last] = " << Z[Z.size() - 1] << endl;
+
+		//cout << X.size() << " " << Z.size() << " " << Y.size() << " " << X.size() * Z.size() << endl;
+		//cout << valuesFromFile[193] << valuesFromFile[194] << valuesFromFile[440952] << endl;
+
+		verticesF = new float[valuesFromFile.size()];
+		int verticesFIndex = 0;
+
+		for (int row = 0; row < nrows; row++) {
+			for (int col = 0; col < ncols; col++) {
+				verticesFIndex = (row * ncols) + col;
+				//cout << verticesFIndex << endl;
+
+				switch (verticesFIndex % 3) {
+				case 1:
+					verticesF[verticesFIndex] = X[row];
+					//cout << "X" << verticesF[verticesFIndex] << ", ";
+					break;
+				case 2:
+					verticesF[verticesFIndex] = Y[verticesFIndex];
+					//cout << "Y" << verticesF[verticesFIndex] << "; ";
+					break;
+				case 0:
+					verticesF[verticesFIndex] = Z[col];
+					//cout << "Z" << verticesF[verticesFIndex] << endl;
+					break;
+				}
+
+			}
+		}
+	}
+	else {
+		cout << "Nie uda³o siê otworzyæ pliku!" << endl;
+	}
+
+	return verticesF;
+}
