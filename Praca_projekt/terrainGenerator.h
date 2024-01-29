@@ -12,8 +12,8 @@
 
 
 // RNG functions
-//#define MT
-#define RAND
+#define MT
+//#define RAND
 
 /*
 	#if defined DEBUGGINGDIAMONDSQUARE

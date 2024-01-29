@@ -8,6 +8,7 @@
 #include <numeric>
 #include <cmath>
 #include <random>
+#include <ctime>
 
 #include "shaderLoader.h"
 #include "fileReader.h"
@@ -41,7 +42,7 @@ TO DO:
 */
 
 //#define DEBUGGING
-//#define LISTING
+#define LISTING
 
 //#define NORMVERT
 #define NORMTRIANGLE
@@ -53,15 +54,15 @@ glm::vec3 cameraPos = glm::vec3(500.0f, 100.0f, 500.0f);
 glm::vec3 cameraFront = glm::vec3(-250.0f, -100.0f, -250.0f);
 glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 float fov = 50.0f;
-const float cameraSpeed = 1;
-const int rotationMultiplier = 1;
+const float cameraSpeed = 0.5;
+const int rotationMultiplier = 0.5;
 
 // Ustawienia oœwietlenia
 glm::vec3 lightColor = glm::vec3(1.0f, 1.0f, 1.0f);
 glm::vec3 objectColor = glm::vec3(1.0f, 1.0f, 1.0f);
 glm::vec3 lightPos = glm::vec3(50.0f, 50.0f, 50.0f);
 float lightStr = 25.0;
-const float lightSpeed = 10.0;
+const float lightSpeed = 1.0;
 
 int windowWidth, windowHeight;
 
@@ -285,8 +286,8 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 {
 	if (key == GLFW_KEY_F && action == GLFW_PRESS) {
 		//cout << "F" << endl;
-		makeRandomPartOfTerrainFlat();
-		prepareNormals();
+		//makeRandomPartOfTerrainFlat();
+		//prepareNormals();
 		//prepareIndicies();
 		//randomWithMT();
 	}
@@ -303,13 +304,14 @@ bool whichDataToDraw() {
 	string userInputStream;
 	bool drawingDataFromFile = true;
 
-	//cout << "Shown data will be: " << endl;
-	//cout << "generated with Diamond-Square algorithm [input 1]" << endl;
-	//cout << "loaded from one of files [input 2]" << endl;
-	userInputStream = "2";
-	cout << "your option: " << userInputStream;
-	cout << endl;
-	//cin >> userInputStream;
+	cout << "Shown data will be: " << endl;
+	cout << "generated with Diamond-Square algorithm [input 1]" << endl;
+	cout << "loaded from one of files [input 2]" << endl;
+	//userInputStream = "2";
+	//cout << "your option: " << userInputStream;
+	cout << "your option: ";
+	//cout << endl;
+	cin >> userInputStream;
 
 	if (userInputStream.length() == 1) {
 		userInput = stoi(userInputStream);
@@ -319,16 +321,15 @@ bool whichDataToDraw() {
 			drawingDataFromFile = false;
 			break;
 		case 2:
-			/*
+			
 			cout << "Enter number in [] to draw area!" << endl;
 			cout << "Tatry [1]" << endl;
 			cout << "Gore [2]" << endl;
 			cout << "Valdez [3]" << endl;
-			cout << "Churfirsten [4]" << endl;
 			cout << "Choosen number: ";
 			cin >> userInputStream;
-			*/
-			userInputStream = "1";
+			
+			//userInputStream = "1";
 			drawingDataFromFile = true;
 			setDrawDataPath(stoi(userInputStream));
 			break;
@@ -363,14 +364,15 @@ void prepareDataForDrawing() {
 		int startingStepSize = 0;
 
 		// Wspó³rzêdne generowane przez Diamond-Square
-		//cout << "Size of array for Diamond-Square: 2^n+1" << endl;
-		//cout << "Please input value of n" << endl;
-		//cin >> userInputStream;
+		cout << "Size of array for Diamond-Square: 2^n+1" << endl;
+		cout << "Please input value of n" << endl;
+		cout << "n = ";
+		cin >> userInputStream;
 
-		cout << endl;
+		//cout << endl;
 		int n = 8;
-		cout << "n = " << n << endl;
-		//n = stoi(userInputStream);
+		//cout << "n = " << n << endl;
+		n = stoi(userInputStream);
 		
 		ncols = pow(2, n) + 1;
 		nrows = pow(2, n) + 1;
@@ -389,50 +391,51 @@ void prepareDataForDrawing() {
 
 		vertices = new float[3 * nrows * ncols];
 		
-		//cout << "Same random value for all starting corners." << endl;
-		//cout << "Please input [1] if you want them to be same or [0] if you want different" << endl;
-		// cout << "choosen option: " << userInputStream;
-		//cin >> userInputStream;
+		cout << "Same random value for all starting corners." << endl;
+		cout << "Please input [1] if you want them to be same or [0] if you want different" << endl;
+		//cout << "choosen option: " << userInputStream;
+		cout << "choosen option: ";
+		cin >> userInputStream;
 		sameValueInCorners = false;
-		cout << "sameValueInCorners: " << ((sameValueInCorners) ? "TRUE" : "FALSE") << endl;
+		//cout << "sameValueInCorners: " << ((sameValueInCorners) ? "TRUE" : "FALSE") << endl;
 		
-		/*
 		if (stoi(userInputStream) == 1) {
-			sameCornerValues = true;
+			sameValueInCorners = true;
 		}
 		else if (stoi(userInputStream) == 0) {
-			sameCornerValues = false;
+			sameValueInCorners = false;
 		}
 		else {
 			cout << "WARNING: There is not such option!" << endl;
 		}
-		*/
+		
 
-		//cout << "Plese enter max value of range for randomization!" << endl
-		// cout << "max value: " << userInputStream;
-		//cin >> userInputStream;
+		cout << "Plese enter max value of range for randomization!" << endl;
+		//cout << "max value: " << userInputStream;
+		cout << "max value: ";
+		cin >> userInputStream;
 		maxRandomValue = 50;
-		cout << "maxRandomValue: " << maxRandomValue << endl;
+		//cout << "maxRandomValue: " << maxRandomValue << endl;
 		
-		//cout << "If you want values to be randomize from range 0 <-> " << maxRandomValue << " enter [0]" << endl
-		// cout << "If you want them to be randomize from -"<< maxRandomValue << " <-> " << maxRandomValue << " enter [1]" << endl;
-		// cout << "choosen option: " << userInputStream;
-		//cin >> userInputStream;
+		cout << "If you want values to be randomize from range 0 <-> " << maxRandomValue << " enter [0]" << endl;
+		cout << "If you want them to be randomize from -"<< maxRandomValue << " <-> " << maxRandomValue << " enter [1]" << endl;
+		//cout << "choosen option: " << userInputStream;
+		cout << "choosen option: ";
+		cin >> userInputStream;
 		isRandomRangeSymmetrical = true;
-		cout << "isRandomRangeSymmetrical: " << ((isRandomRangeSymmetrical) ? "TRUE" : "FALSE") << endl;
-		/*
+		//cout << "isRandomRangeSymmetrical: " << ((isRandomRangeSymmetrical) ? "TRUE" : "FALSE") << endl;
+		
 		if (stoi(userInputStream) == 1) {
-			randomRangeSymmetrical = true;
+			isRandomRangeSymmetrical = true;
 		}
 		else if (stoi(userInputStream) == 0) {
-			sameCornerValues = false;
+			isRandomRangeSymmetrical = false;
 		}
 		else {
 			cout << "WARNING: There is not such option!" << endl;
 		}
-		*/
-
 		
+
 		initGenerator(startingStepSize); // add randomRangeSymmetrical argument
 		prepareElevationDataWithDiamondSquare(startingStepSize);
 
@@ -550,6 +553,16 @@ void keyPressHandling(GLFWwindow* window)
 	{
 		//cout << "J" << endl;
 		lightPos.y -= lightSpeed; // Ruch œwiat³a w dó³
+	}
+	if (glfwGetKey(window, GLFW_KEY_M) == GLFW_PRESS)
+	{
+		//cout << "M" << endl;
+		lightStr += 1; // Wzmocnienie si³y oœwietlenia
+	}
+	if (glfwGetKey(window, GLFW_KEY_N) == GLFW_PRESS)
+	{
+		//cout << "N" << endl;
+		lightStr -= 1; // Os³abienie si³y oœwietlenia
 	}
 }
 

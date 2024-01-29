@@ -3,6 +3,7 @@
 #include <fstream>
 #include <vector>
 #include <numeric>
+#include <algorithm>
 
 #include "globalVariables.h"
 
@@ -39,13 +40,11 @@ fstream elevDataStream;
 string path = "draw_data/tatry2.asc";
 string pathGore = "draw_data/draw2.asc";
 string pathValdez = "draw_data/draw3.asc";
-string pathChur = "draw_data/draw1.asc";
 enum FileNames
 {
 	tatry,			//tatry2
 	gore,			//draw2
 	valdez,			//draw3
-	churfirsten,	//draw1
 	invalidName
 };
 
@@ -85,10 +84,6 @@ void setDrawDataPath(int option) {
 		path = pathValdez;
 		cout << "path: " << path << endl;
 		break;
-	case 4:
-		path = pathChur;
-		cout << "path: " << path << endl;
-		break;
 	default:
 		cout << "There is not such area to draw!" << endl;
 		exit;
@@ -100,7 +95,6 @@ FileNames resolveFileName(string input) {
 	if (input == "tatry2.asc") return tatry;
 	if (input == "draw2.asc") return gore;
 	if (input == "draw3.asc") return valdez;
-	if (input == "draw1.asc") return churfirsten;
 
 	return invalidName;
 }
@@ -148,10 +142,6 @@ void loadParamsFromFile() {
 		multiplierOfColsAndRows = 0.5;
 		stepForColsAndRows = 2;
 		maxNormalizeValue = 20;
-		break;
-	case churfirsten:
-		multiplierOfColsAndRows = 0.5;
-		stepForColsAndRows = 2;
 		break;
 	default:
 		cout << "WARNING: something wrong with preparing multiplier for cols and rows!" << endl;
