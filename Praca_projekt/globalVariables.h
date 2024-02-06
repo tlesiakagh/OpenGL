@@ -5,5 +5,6 @@ extern int verticesSize;
 extern float* vertices;
 
 extern int maxRandomValue;
+extern int maxNormalizedHeight;
 extern bool isRandomRangeSymmetrical;
 extern bool sameValueInCorners;

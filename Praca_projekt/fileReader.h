@@ -34,7 +34,6 @@ using namespace std;
 
 int stepForColsAndRows = 1;
 float multiplierOfColsAndRows = 1;
-int maxNormalizeValue = 0;
 size_t startPos = 0, endPos = 0;
 fstream elevDataStream;
 string path = "draw_data/tatry2.asc";
@@ -131,17 +130,17 @@ void loadParamsFromFile() {
 	switch (resolveFileName(drawDataFileName)) {
 	case tatry:
 		multiplierOfColsAndRows = 1;
-		maxNormalizeValue = 10;
+		maxNormalizedHeight = 10;
 		break;
 	case gore:
 		multiplierOfColsAndRows = 0.5;
 		stepForColsAndRows = 2;
-		maxNormalizeValue = 20;
+		maxNormalizedHeight = 20;
 		break;
 	case valdez:
 		multiplierOfColsAndRows = 0.5;
 		stepForColsAndRows = 2;
-		maxNormalizeValue = 20;
+		maxNormalizedHeight = 20;
 		break;
 	default:
 		cout << "WARNING: something wrong with preparing multiplier for cols and rows!" << endl;
@@ -232,7 +231,7 @@ float* loadVertices() {
 		}
 		#endif
 
-		vector<float> normalizedElevData = normalize(elevData, elevDataMin, elevDataMax, 0, maxNormalizeValue);
+		vector<float> normalizedElevData = normalize(elevData, elevDataMin, elevDataMax, 0, maxNormalizedHeight);
 
 		verticesSize = 3 * elevData.size();
 		vertices = new float[verticesSize];

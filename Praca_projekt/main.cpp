@@ -13,6 +13,7 @@
 #include "shaderLoader.h"
 #include "fileReader.h"
 #include "terrainGenerator.h"
+//#include "terrainGenerator2.h"
 #include "globalVariables.h"
 
 #include "glm/vec3.hpp" 
@@ -22,27 +23,11 @@
 
 /*
 TO DO:
-	1. Przyjrzeæ siê generowaniu wektorów normalnych
-	2. Pobieranie inputu od u¿ytkownika na temat: [V]
-		a) maxRandomValue, 
-		b) symetrycznoœci przedzia³u losowania (tj. 0<->max czy -max<->max), 
-		c) tego czy s¹ te same naro¿niki czy nie [V]
-
-	3. Zrobiæ porz¹dek z u³o¿eniem funkcji i zmiennych; na podobnej zasadzie do terrainGenerator.h [DONE]
-	4. Zrobiæ tak, aby DiamondSquare mia³o wywo³ywa³o tylko 2 swoje funkcje, tj. InitGenerator, prepareElevationDataFromDiamondSquare (które zwraca dane od razu do co vertices, czyli potrzeba funkcji zwracaj¹cej kolejne wartoœci
-		albo stworzyæ funkcje, która zwraca w ca³oœci wygenerowan¹ tablicê vertices (tak jak to wygl¹da w przypadku czytania z pliku) [V]
-	5. Zrobiæ jedn¹ funkcjê, która przygotowuje nrows, ncols, vertices (w funkcji znajdowa³ by siê kontakt z u¿ytkownikem) 
-	6. Ogarn¹æ aby u¿ytkownik móg³ kontrolowaæ to czy przy DiamondSquare s¹ te same naro¿niki (2. argument initGenerator), i z jakiego przedzia³u losowane s¹ wartoœci (3. argument initGenerator)
-
-	#if defined PROJECT1
-	{
-		// some code
-	}
-	#endif
+	1. Przygl¹dniêcie siê DiamondSquare, mo¿e zrobiæ funkcjê, która dzia³a tak jak ta z kodu od promotorki
 */
 
 //#define DEBUGGING
-#define LISTING
+//#define LISTING
 
 //#define NORMVERT
 #define NORMTRIANGLE
@@ -55,7 +40,7 @@ glm::vec3 cameraFront = glm::vec3(-250.0f, -100.0f, -250.0f);
 glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 float fov = 50.0f;
 const float cameraSpeed = 0.5;
-const int rotationMultiplier = 0.5;
+const int rotationMultiplier = 1;
 
 // Ustawienia oœwietlenia
 glm::vec3 lightColor = glm::vec3(1.0f, 1.0f, 1.0f);
@@ -65,6 +50,7 @@ float lightStr = 25.0;
 const float lightSpeed = 1.0;
 
 int windowWidth, windowHeight;
+int displayMode = 1;
 
 glm::mat4 Model = glm::mat4(1.0f);
 
@@ -73,6 +59,7 @@ GLuint VAO, VBO, EBO, VBO_normals;
 int nrows; // deklaracja zmiennej globalnej
 int ncols; // deklaracja zmiennej globalnej
 int verticesSize; // deklaracja zmiennej globalnej
+int maxNormalizedHeight; // deklaracja zmiennej globalnej
 float* vertices; // deklaracja zmiennej globalnej
 
 unsigned int* indices;
@@ -103,7 +90,6 @@ glm::vec3 calculateNormalForVertex2(int xIndex, glm::vec3 centerVertex);
 glm::vec3 calculateNormalForTriangle(int xIndex, glm::vec3 centerVertex);
 
 int main(){
-	srand(time(NULL));
 //--------------------------------------PRZYGOTOWANIE DANYCH------------------------------------
 	prepareDataForDrawing();
 	
@@ -165,8 +151,8 @@ int main(){
 
 	if (flags & GL_CONTEXT_FLAG_DEBUG_BIT)
 	{
-		glEnable(GL_DEBUG_OUTPUT);
-		glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+		//glEnable(GL_DEBUG_OUTPUT);
+		//glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
 		glDebugMessageCallback(glDebugOutput, nullptr);
 		glDebugMessageControl(GL_DEBUG_SOURCE_API, GL_DEBUG_TYPE_ERROR, GL_DEBUG_SEVERITY_HIGH, 0, nullptr, GL_TRUE);
 	}
@@ -188,11 +174,34 @@ int main(){
 	}
 	#endif
 
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, verticesSize * sizeof(float), vertices, GL_STATIC_DRAW);//GL_DYNAMIC_DRAW
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indicesSize * sizeof(int), indices, GL_STATIC_DRAW);//GL_DYNAMIC_DRAW
+
+	glBindBuffer(GL_ARRAY_BUFFER, VBO_normals);
+	glBufferData(GL_ARRAY_BUFFER, verticesSize * sizeof(float), normals, GL_STATIC_DRAW);//GL_DYNAMIC_DRAW
+
+	glBindVertexArray(VAO);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), 0);
+
+	glBindBuffer(GL_ARRAY_BUFFER, VBO_normals);
+	glEnableVertexAttribArray(2);
+	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+
+	glBindVertexArray(0);
+
 	/*
 	string trash;
 	cout << "Enter sth ";
 	cin >> trash;
 	*/
+
+	cout << "Drawing terrain ..." << endl;
 //------------------------------------------MAIN LOOP-------------------------------------------
 	while (!glfwWindowShouldClose(window)){
 		keyPressHandling(window);
@@ -214,33 +223,17 @@ int main(){
 		GLuint lightColorId = glGetUniformLocation(shaderProgram, "lightColor");
 		GLuint lightPosId = glGetUniformLocation(shaderProgram, "lightPos");
 		GLuint lightStrId = glGetUniformLocation(shaderProgram, "lightStr");
+		GLuint displayModeId = glGetUniformLocation(shaderProgram, "displayMode");
+		GLuint maxNormalizedHeightId = glGetUniformLocation(shaderProgram, "maxHeight");
 
 		glUniformMatrix4fv(mvpID, 1, GL_FALSE, &mvp[0][0]);
 		glUniform3fv(objectColorId, 1, &objectColor[0]);
 		glUniform3fv(lightColorId, 1, &lightColor[0]);
 		glUniform3fv(lightPosId, 1, &lightPos[0]);
 		glUniform1f(lightStrId, lightStr);
+		glUniform1i(displayModeId, displayMode);
+		glUniform1i(maxNormalizedHeightId, maxNormalizedHeight);
 
-		glBindBuffer(GL_ARRAY_BUFFER, VBO);
-		glBufferData(GL_ARRAY_BUFFER, verticesSize * sizeof(float), vertices, GL_DYNAMIC_DRAW); //GL_STATIC_DRAW
-
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indicesSize * sizeof(int), indices, GL_DYNAMIC_DRAW);//GL_STATIC_DRAW
-
-		glBindBuffer(GL_ARRAY_BUFFER, VBO_normals);
-		glBufferData(GL_ARRAY_BUFFER, verticesSize * sizeof(float), normals, GL_DYNAMIC_DRAW);//GL_STATIC_DRAW
-
-		glBindVertexArray(VAO);
-		glBindBuffer(GL_ARRAY_BUFFER, VBO);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-		glEnableVertexAttribArray(0);
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), 0);
-
-		glBindBuffer(GL_ARRAY_BUFFER, VBO_normals);
-		glEnableVertexAttribArray(2);
-		glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
-
-		glBindVertexArray(0);
 		glBindVertexArray(VAO);
 		
 		//glDrawElements(GL_TRIANGLES, 6 * ((ncols - 1) * (nrows - 1)), GL_UNSIGNED_INT, 0);
@@ -290,6 +283,21 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 		//prepareNormals();
 		//prepareIndicies();
 		//randomWithMT();
+	}
+	if (key == GLFW_KEY_1 && action == GLFW_PRESS) {
+		//cout << "1" << endl;
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		displayMode = 1;
+	}
+	if (key == GLFW_KEY_2 && action == GLFW_PRESS) {
+		//cout << "2" << endl;
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		displayMode = 2;
+	}
+	if (key == GLFW_KEY_3 && action == GLFW_PRESS) {
+		//cout << "3" << endl;
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		displayMode = 3;
 	}
 }
 
@@ -361,6 +369,7 @@ void prepareDataForDrawing() {
 		vertices = loadVertices();
 	}
 	else {
+		srand(time(NULL));
 		int startingStepSize = 0;
 
 		// Wspó³rzêdne generowane przez Diamond-Square
@@ -376,8 +385,9 @@ void prepareDataForDrawing() {
 		
 		ncols = pow(2, n) + 1;
 		nrows = pow(2, n) + 1;
-		//startingStepSize = (ncols - 1) / 4;
-		startingStepSize = ncols - 1;
+		//startingStepSize = (ncols-1)/2;
+		//startingStepSize = (ncols-1);
+		startingStepSize = ncols;
 
 		cout << "nrows: " << nrows << " ncols: " << ncols << endl;
 
@@ -391,6 +401,13 @@ void prepareDataForDrawing() {
 
 		vertices = new float[3 * nrows * ncols];
 		
+		cout << "Plese enter max value of range for randomization!" << endl;
+		//cout << "max value: " << userInputStream;
+		cout << "max value: ";
+		cin >> userInputStream;
+		maxRandomValue = stoi(userInputStream);
+		//cout << "maxRandomValue: " << maxRandomValue << endl;
+
 		cout << "Same random value for all starting corners." << endl;
 		cout << "Please input [1] if you want them to be same or [0] if you want different" << endl;
 		//cout << "choosen option: " << userInputStream;
@@ -408,14 +425,6 @@ void prepareDataForDrawing() {
 		else {
 			cout << "WARNING: There is not such option!" << endl;
 		}
-		
-
-		cout << "Plese enter max value of range for randomization!" << endl;
-		//cout << "max value: " << userInputStream;
-		cout << "max value: ";
-		cin >> userInputStream;
-		maxRandomValue = 50;
-		//cout << "maxRandomValue: " << maxRandomValue << endl;
 		
 		cout << "If you want values to be randomize from range 0 <-> " << maxRandomValue << " enter [0]" << endl;
 		cout << "If you want them to be randomize from -"<< maxRandomValue << " <-> " << maxRandomValue << " enter [1]" << endl;
@@ -435,8 +444,7 @@ void prepareDataForDrawing() {
 			cout << "WARNING: There is not such option!" << endl;
 		}
 		
-
-		initGenerator(startingStepSize); // add randomRangeSymmetrical argument
+		initGenerator(startingStepSize);
 		prepareElevationDataWithDiamondSquare(startingStepSize);
 
 		int vertexIndex = 0;
@@ -613,7 +621,7 @@ unsigned int* prepareIndicies() {
 	int indexPos = 0, index = 0;
 	//int trash;
 
-	for (int row = 0; row < nrows - 1; row++) {
+	for (int row = nrows - 2; row >= 0; row--) {
 		for (int col = 0; col < ncols - 1; col++) {
 
 			indices[indexPos] = (row * ncols) + col;
@@ -728,14 +736,14 @@ float* prepareNormals() {
 
 void makeRandomPartOfTerrainFlat() {
 	cout << "Press F" << endl;
-	int nrowsToFlatten = 10;
-	int ncolsToFlatten = 10;
+	int nrowsToFlatten = 20;
+	int ncolsToFlatten = 20;
 	//int randomStartingRow = ((nrows - 2 * nrowsToFlatten) * ((int)rand() / (RAND_MAX))) + nrowsToFlatten;
 	//int randomStartingCol = ((ncols - 2 * ncolsToFlatten) * ((int)rand() / (RAND_MAX))) + ncolsToFlatten;
-	int randomStartingRow = 120;
+	int randomStartingRow = 0;
 	//int randomStartingRow = rand() % ((nrows - nrowsToFlatten) - nrowsToFlatten + 1) + nrowsToFlatten;
 	//int randomStartingCol = rand() % ((ncols - ncolsToFlatten) - ncolsToFlatten + 1) + ncolsToFlatten;
-	int randomStartingCol = 120;
+	int randomStartingCol = 0;
 	int randomStartingPos = ((randomStartingRow * ncols) + randomStartingCol) * 3;
 	cout << "randomStartingRow: " << randomStartingRow  <<  endl;
 	cout << "randomStartingCol: " << randomStartingCol  << endl;

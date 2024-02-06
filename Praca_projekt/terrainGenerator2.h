@@ -28,7 +28,7 @@ float sample(int x, int y);
 void setSample(int x, int y, float value);
 void sampleSquare(int x, int y, int stepSize, float value);
 void sampleDiamond(int x, int y, int stepSize, float value);
-void DiamondSquare(int stepSize, int roughness);
+void DiamondSquare(int stepSize, float scale);
 
 //--------------------------------Funkcje pomocniczne - Nag³ówki--------------------------------
 float randomFromRange(int maxValue, int option);
@@ -56,14 +56,16 @@ void initGenerator(int startingStepSize) {
 	//cout << "size: " << nrows * ncols << endl;
 	//cin >> trash;
 
-	randomValue = randomFromRange(maxRandomValue/2, 0);
+	//randomValue = randomFromRange(maxRandomValue /2, 0);
+	randomValue = randomFromRange(maxRandomValue, 1);
 	for (int y = 0; y < nrows; y += startingStepSize) {
 		for (int x = 0; x < ncols; x += startingStepSize) {
 			if (sameValueInCorners) {
 				setSample(x, y, randomValue);
 			}
 			else {
-				setSample(x, y, randomFromRange(maxRandomValue/2, 0));
+				//setSample(x, y, randomFromRange(maxRandomValue/2, 0));
+				setSample(x, y, randomFromRange(maxRandomValue, 1));
 			}
 		}
 	}
@@ -72,21 +74,21 @@ void initGenerator(int startingStepSize) {
 void prepareElevationDataWithDiamondSquare(int startingStepSize) {
 	int currentStepSize = startingStepSize;
 	int step = 1;
-	int roughness = maxRandomValue;
+	float scale = 1.0;
 	// W niektórych implementacjach wykorzystuj¹ roughness zamiast scale
 	// W przypadku roughness liczbê dodawan¹ do œredniej z 4 punktów losuj¹ z przedzia³u (-roughness, roughness), zamiast RANDOM * scale
 	string trash;
 	while (currentStepSize > 1)
 	{
 		// cout << "-----------------------" << step << "-----------------------" << endl;
-		DiamondSquare(currentStepSize, roughness);
+		DiamondSquare(currentStepSize, scale);
 
 		currentStepSize /= 2;
-		roughness /= 2.0;
-
+		scale /= 2.0;
+		cout << "scale = " << scale << endl;
+		
 		//cout << "maxRandomValue: " << maxRandomValue << ", at step " << step << endl;
 		
-		//cout << roughness << endl;
 		step++;
 		#if defined DEBUGRAND
 		{
@@ -101,7 +103,7 @@ void prepareElevationDataWithDiamondSquare(int startingStepSize) {
 	//normalizeDiamondSquare(findMinMax(0), findMinMax(1), 0, 30);
 	fillVerticesArray();
 	maxNormalizedHeight = findMinMax(1);
-	//cout << "maxNormalizedHeight from terrainGenerator: " << maxNormalizedHeight << endl;
+	cout << "maxNormalizedHeight from terrainGenerator: " << maxNormalizedHeight << endl;
 }
 
 float randomFromRange(int maxValue, int option) {
@@ -119,7 +121,7 @@ float randomFromRange(int maxValue, int option) {
 	float randomValue = 0;
 	#if defined DEBUGGINGDIAMONDSQUARE
 	{
-		cout << "maxValue: " << maxValue << endl;
+		//cout << "maxRandomValue: " << maxRandomValue << endl;
 	}
 	#endif
 	switch (option) {
@@ -247,21 +249,21 @@ void showElevDataAsMatrix() {
 }
 
 //--------------------------------DiamondSquare - Cia³o funkcji---------------------------------
-void DiamondSquare(int stepSize, int roughness)
+void DiamondSquare(int stepSize, float scale)
 {
 	int hs = stepSize / 2;
 	int xPlusHs, yPlusHs;
 	//cout << "Entering DiamondSquare" << endl;
-	for (int y = hs; y < nrows; y += stepSize)
+	for (int y = hs; y < nrows + hs; y += stepSize)
 	{
-		for (int x = hs; x < ncols; x += stepSize)
+		for (int x = hs; x < ncols + hs; x += stepSize)
 		{
 			squareCounter++;
 			if (isRandomRangeSymmetrical) {
-				sampleSquare(x, y, stepSize, randomFromRange(roughness, 1) /** scale*/);
+				sampleSquare(x, y, stepSize, randomFromRange(maxRandomValue, 1) * scale);
 			}
 			else {
-				sampleSquare(x, y, stepSize, randomFromRange(roughness, 0) /** scale*/);
+				sampleSquare(x, y, stepSize, randomFromRange(maxRandomValue, 0) /** scale*/);
 			}	
 		}
 	}
@@ -276,12 +278,12 @@ void DiamondSquare(int stepSize, int roughness)
 
 			diamondCounter+=2;
 			if (isRandomRangeSymmetrical) {
-				sampleDiamond(xPlusHs, y, stepSize, randomFromRange(roughness, 1) /** scale*/);
-				sampleDiamond(x, yPlusHs, stepSize, randomFromRange(roughness, 1) /** scale*/);
+				sampleDiamond(xPlusHs, y, stepSize, randomFromRange(maxRandomValue, 1) * scale);
+				sampleDiamond(x, yPlusHs, stepSize, randomFromRange(maxRandomValue, 1) * scale);
 			}
 			else {
-				sampleDiamond(xPlusHs, y, stepSize, randomFromRange(roughness, 0) /** scale*/);
-				sampleDiamond(x, yPlusHs, stepSize, randomFromRange(roughness, 0) /** scale*/);
+				sampleDiamond(xPlusHs, y, stepSize, randomFromRange(maxRandomValue, 0) /** scale*/);
+				sampleDiamond(x, yPlusHs, stepSize, randomFromRange(maxRandomValue, 0) /** scale*/);
 			}
 		}
 	}
@@ -307,7 +309,7 @@ void sampleSquare(int x, int y, int stepSize, float value)
 	float c = sample(x - hs, y + hs);
 	float d = sample(x + hs, y + hs);
 
-	//cout << "scale: " << value << endl;
+	//cout << "value: " << value << endl;
 	//cout << "meanValue: " << ((a + b + c + d) / 4.0) << endl;
 	//cout << "SquareValue: " << ((a + b + c + d) / 4.0) + value << " at pos (" << y << ", " << x << ")" << endl;
 	//cout << "(" << x << ", " << y << "), " << "(" << x - hs << ", " << y - hs << "): " << a << endl;
@@ -351,7 +353,7 @@ float sample(int x, int y)
 	//cout << "(" << x << ", " << y << ") ";
 	
 	if ((x >= 0 && x <= ncols - 1) && (y >= 0 && y <= nrows - 1)) {
-		// sampleValue = elevData[(y * ncols) + x];
+		//sampleValue = elevData[(y * ncols) + x];
 		//cout << "In range!" << endl;
 	}
 	else {
@@ -360,10 +362,11 @@ float sample(int x, int y)
 		//cout << "Not in range!" << endl;
 	}
 	//cout << "After sample if" << endl;
-	// return sampleValue;
+	//return sampleValue;
 
 	//cout << "function -> sample, " << x << ", " << y << "; pos: (" << ((x % ncols) < 0 ? ncols + x : x % ncols) << ", " << ((y % nrows) < 0 ? nrows + y : y % nrows) << ")" << endl;
-	return elevData[((x % ncols) < 0 ? ncols + x : x % ncols) + ((y % nrows) < 0 ? nrows + y : y % nrows) * ncols];
+	//return elevData[((x % ncols) < 0 ? ncols + x : x % ncols) + ((y % nrows) < 0 ? nrows + y : y % nrows) * ncols];
+	return elevData[(x & (ncols - 1)) + (y & (nrows - 1)) * ncols];
 }
 
 void setSample(int x, int y, float value)
@@ -371,10 +374,11 @@ void setSample(int x, int y, float value)
 	if ((x >= 0 && x <= ncols - 1) && (y >= 0 && y <= nrows - 1)) {
 		//cout << "Setting data at pos: (" << x << ", " << y << ")" << endl;
 		//cout << "Setting data at pos: " << (y * ncols) + x << endl;
-		// elevData[(y * ncols) + x] = value;
+		//elevData[(y * ncols) + x] = value;
 		//cout << "elevData: " << elevData[(y * ncols) + x] << endl;
 	}
-	
+
 	//cout << "function -> setSample, " << x << ", " << y << "; pos: (" << ((x % ncols) < 0 ? ncols + x : x % ncols) << ", " << ((y % nrows) < 0 ? nrows + y : y % nrows) << ")" << endl;
-	elevData[((x % (ncols)) < 0 ? ncols + x : x % ncols) + ((y % (nrows)) < 0 ? nrows + y : y % nrows) * ncols] = value;
+	//elevData[((x % (ncols)) < 0 ? ncols + x : x % ncols) + ((y % (nrows)) < 0 ? nrows + y : y % nrows) * ncols] = value;
+	elevData[(x & (ncols - 1)) + (y & (nrows - 1)) * ncols] = value;
 }

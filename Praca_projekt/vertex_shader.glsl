@@ -8,12 +8,13 @@ uniform mat4 MVP;
 
 out vec3 FragPos;
 out vec3 Normal;
+out float Height;
 
 void main()
 {
 	FragPos = aPos;
-	Normal=aNormal;
+	Normal = aNormal;
+	Height = aPos.y;
+
     gl_Position = MVP * vec4(aPos.x, aPos.y, aPos.z, 1.0);
-    //gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);
-	
 }
